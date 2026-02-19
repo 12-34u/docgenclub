@@ -41,6 +41,14 @@ const features = [
 
 const docTypes = ['Instagram', 'Instagram Post Event', 'LinkedIn', 'Report', 'Notice', 'Whatsapp Invite', 'Whatsapp Post Event']
 
+const socialGenerators = {
+  Instagram: generateInstagramContent,
+  'Instagram Post Event': generateInstagramPostEvent,
+  LinkedIn: generateLinkedInContent,
+  'Whatsapp Invite': generateWhatsAppInvite,
+  'Whatsapp Post Event': generateWhatsAppPostEvent,
+}
+
 function App() {
   const [showForm, setShowForm] = useState(false)
   const [generatedContent, setGeneratedContent] = useState(null)
@@ -75,6 +83,12 @@ function App() {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
+  const getSocialContent = async (type) => {
+    const fallback = socialGenerators[type]
+    if (!fallback) throw new Error('Unsupported social doc type')
+    return fallback(formData)
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     const { docType, eventName } = formData
@@ -94,40 +108,12 @@ function App() {
           type: 'report',
           message: `✅ Report document for "${eventName}" has been generated and downloaded!`,
         })
-      } else if (docType === 'Instagram') {
-        const content = generateInstagramContent(formData)
+      } else if (socialGenerators[docType]) {
+        const content = await getSocialContent(docType)
         setGeneratedContent({
           type: 'social',
           content,
-          platform: 'Instagram',
-        })
-      } else if (docType === 'Instagram Post Event') {
-        const content = generateInstagramPostEvent(formData)
-        setGeneratedContent({
-          type: 'social',
-          content,
-          platform: 'Instagram Post Event',
-        })
-      } else if (docType === 'LinkedIn') {
-        const content = generateLinkedInContent(formData)
-        setGeneratedContent({
-          type: 'social',
-          content,
-          platform: 'LinkedIn',
-        })
-      } else if (docType === 'Whatsapp Invite') {
-        const content = generateWhatsAppInvite(formData)
-        setGeneratedContent({
-          type: 'social',
-          content,
-          platform: 'WhatsApp Invite',
-        })
-      } else if (docType === 'Whatsapp Post Event') {
-        const content = generateWhatsAppPostEvent(formData)
-        setGeneratedContent({
-          type: 'social',
-          content,
-          platform: 'WhatsApp Post Event',
+          platform: docType,
         })
       }
     } catch (error) {
@@ -240,6 +226,7 @@ function App() {
                     setFormData({
                       eventName: '',
                       eventDate: '',
+                      eventVenue: '',
                       eventStartTime: '',
                       eventEndTime: '',
                       eventDuration: '',
