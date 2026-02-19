@@ -77,6 +77,26 @@ function App() {
         setFormData({ [name]: value });
     };
 
+    const handleSpeakerChange = (index, field, value) => {
+        const updated = (formData.speakers ?? []).map((s, i) =>
+            i === index ? { ...s, [field]: value } : s,
+        );
+        setFormData({ speakers: updated });
+    };
+
+    const addSpeaker = () => {
+        setFormData({
+            speakers: [...(formData.speakers ?? []), { name: "", designation: "" }],
+        });
+    };
+
+    const removeSpeaker = (index) => {
+        const updated = (formData.speakers ?? []).filter((_, i) => i !== index);
+        setFormData({
+            speakers: updated.length ? updated : [{ name: "", designation: "" }],
+        });
+    };
+
     const getSocialContent = async (type) => {
         const fallback = socialGenerators[type];
         if (!fallback) throw new Error("Unsupported social doc type");
@@ -342,6 +362,79 @@ function App() {
                                             ))}
                                         </select>
                                     </label>
+                                </div>
+
+                                {/* Speakers Section */}
+                                <div className="field" style={{ marginTop: "1rem" }}>
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "space-between",
+                                            marginBottom: "0.75rem",
+                                        }}
+                                    >
+                                        <span style={{ fontWeight: 600 }}>Speakers</span>
+                                        <button
+                                            type="button"
+                                            className="btn ghost"
+                                            onClick={addSpeaker}
+                                            style={{ padding: "0.3rem 0.9rem", fontSize: "0.85rem" }}
+                                        >
+                                            + Add Speaker
+                                        </button>
+                                    </div>
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            gap: "0.6rem",
+                                        }}
+                                    >
+                                        {(formData.speakers ?? []).map((speaker, index) => (
+                                            <div
+                                                key={index}
+                                                style={{
+                                                    display: "grid",
+                                                    gridTemplateColumns: "1fr 1fr auto",
+                                                    gap: "0.6rem",
+                                                    alignItems: "center",
+                                                }}
+                                            >
+                                                <input
+                                                    value={speaker.name}
+                                                    onChange={(e) =>
+                                                        handleSpeakerChange(index, "name", e.target.value)
+                                                    }
+                                                    placeholder="Speaker name"
+                                                />
+                                                <input
+                                                    value={speaker.designation}
+                                                    onChange={(e) =>
+                                                        handleSpeakerChange(
+                                                            index,
+                                                            "designation",
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    placeholder="Designation / Role"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="btn ghost"
+                                                    onClick={() => removeSpeaker(index)}
+                                                    style={{
+                                                        padding: "0.35rem 0.7rem",
+                                                        fontSize: "1rem",
+                                                        lineHeight: 1,
+                                                    }}
+                                                    title="Remove speaker"
+                                                >
+                                                    ✕
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
 
                                 <label className="field">

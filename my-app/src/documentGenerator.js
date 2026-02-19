@@ -56,13 +56,30 @@ const toSentence = (value, fallback = "") =>
 
 const formatDate = (dateStr) => {
     if (!dateStr) return "Add date";
+
     try {
-        return new Date(dateStr).toLocaleDateString("en-US", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-        });
+        const date = new Date(dateStr);
+
+        const day = date.getDate();
+        const year = date.getFullYear();
+        const month = date.toLocaleDateString("en-US", { month: "long" });
+
+        // Get ordinal suffix
+        const getOrdinal = (n) => {
+            if (n > 3 && n < 21) return "th";
+            switch (n % 10) {
+                case 1:
+                    return "st";
+                case 2:
+                    return "nd";
+                case 3:
+                    return "rd";
+                default:
+                    return "th";
+            }
+        };
+
+        return `${day}${getOrdinal(day)} ${month} ${year}`;
     } catch {
         return dateStr;
     }
@@ -407,32 +424,112 @@ If you want practical, hands-on learning with peers, this is for you. Join us an
 };
 
 export const generateWhatsAppInvite = async (formData) => {
-    const { eventName, eventDate, eventStartTime, eventVenue } = formData;
+    const { speakers, eventName, eventDate, eventStartTime, eventVenue } =
+        formData;
+    const formattedSpeakers = speakers?.length
+        ? speakers
+            .map((speaker) => `🌟 ${speaker.name? speaker.name : "Mentor Name"} (${speaker.designation? speaker.designation: "Role"})`)
+            .join("\n")
+        : "🌟 Mentor Name (Role)";
 
     const prompt = `
-Generate a friendly, concise WhatsApp invitation message for AIML Club event. Keep it under 100 words.
+You are the official content writer for AIML Club, APSIT.
 
-Event Details:
-- Event: ${toSentence(eventName, "Club Meetup")}
-- Date: ${eventDate || "Date TBA"}
-- Time: ${toSentence(eventStartTime, "Time TBA")}
-- Venue: ${toSentence(eventVenue, "Venue TBA")}
+Your job is to generate a high-energy, visually structured, and engaging event invitation announcement for an AIML Club event.
 
-Create a casual, friendly WhatsApp message with:
-1. Fun hook
-2. Event details (date, time, venue)
-3. Why they should come
-4. Request to confirm attendance (emoji response like ✋)
-5. Suggestion to bring friends
+Event Details (MANDATORY — use exactly as provided):
+- Event Title: ${eventName}
+- Date: ${formatDate(eventDate)} 
+- Time: ${eventStartTime}
+- Venue: ${eventVenue}
+- Mentor Names: ${formattedSpeakers}
 
-Use WhatsApp-friendly emojis and casual tone. Make it feel like a group chat invite.
+Important:
+- DO NOT modify the date, time, venue, or event title.
+- DO NOT add placeholder mentors.
+- If mentor names are not provided, keep a placeholder format:
+  🌟 Mentor Name (Role)
+- Use the event title exactly as given inside the 🎯 title section.
+
+Tone Guidelines:
+- Energetic and inspiring
+- Beginner-friendly but technically exciting
+- Clear and structured
+- Slightly futuristic and aspirational
+- Emoji-enhanced but not excessive
+
+Follow this EXACT structure:
+
+1️⃣ Strong Hook Line (with emojis)
+- A bold, exciting one-liner that creates curiosity.
+- Should feel futuristic and motivational.
+
+2️⃣ Context Paragraph
+- 2–4 lines explaining why this topic matters in AI/ML.
+- Relate it to real-world applications.
+- Make it relevant to ${eventName}.
+
+3️⃣ Official Presentation Line
+
+The AIML Club, APSIT proudly presents:
+
+🎯 ${eventName} 🎯
+
+4️⃣ Mentors Section
+
+👨‍💻 Meet Your Mentors:
+${formattedSpeakers}
+
+5️⃣ Event Details Section
+
+📅 Date: ${formatDate(eventDate)}
+⏰ Time: ${eventStartTime}
+📍 Venue: ${eventVenue}
+
+6️⃣ What You’ll Learn
+
+✨ What You’ll Learn:
+🔹 4–5 strong, practical learning outcomes
+- Tailored specifically to ${eventName}
+- Mention tools, concepts, evolution, or applications where relevant
+- Keep them value-driven
+
+7️⃣ Why Should You Attend?
+
+💡 Why Should You Attend?
+- 3–4 relatable beginner questions or struggles
+- Make them emotionally engaging
+- Use emojis naturally
+- Tailored specifically to ${eventName}
+
+8️⃣ Closing Statement
+- One strong motivational line encouraging participation
+- Make it feel like a step forward in their AI journey
+
+Formatting Rules:
+- Maintain clean spacing between sections
+- Keep paragraphs short
+- Do not overuse emojis
+- Avoid robotic or corporate tone
+- Keep it suitable for AIML college students
+- Output should be ready to send on WhatsApp or Discord
+- Stick to the format, don't number the sections with 1, 2, 3 etc. 
+
+Do NOT:
+- Add extra sections
+- Change structure
+- Repeat generic phrases
+- Add filler text
 `;
 
     const aiContent = await callGemini(prompt);
 
     return (
         aiContent ||
-        `🎉 AIML Club Invite 🎉
+        `
+THERE WAS AN ERROR WHILE GENERATING CONTENT WITH AI, FALLBACK DEFAULT TEMPLATE:
+
+🎉 AIML Club Invite 🎉
 
 Event: ${toSentence(eventName, "Club Meetup")}
 📅 Date: ${eventDate || "Date TBA"}
@@ -440,7 +537,8 @@ Event: ${toSentence(eventName, "Club Meetup")}
 📍 Venue: ${toSentence(eventVenue, "Venue TBA")}
 
 Join us for an unforgettable experience!
-Reply with ✋ to confirm your attendance. Bring a friend! 👋`
+Reply with ✋ to confirm your attendance. Bring a friend! 👋
+`
     );
 };
 
