@@ -8,49 +8,9 @@ import {
     Header,
     Footer,
 } from "docx";
+import { generateTextBackend } from "./backendClient";
 
-const GROQ_API_KEY =
-    import.meta.env.VITE_GROQ_API_KEY ||
-    "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";
-
-const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
-
-const callGemini = async (prompt) => {
-    try {
-        const response = await fetch(GROQ_API_URL, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${GROQ_API_KEY}`,
-            },
-            body: JSON.stringify({
-                model: "llama-3.3-70b-versatile", // fast + good default
-                messages: [
-                    {
-                        role: "user",
-                        content: prompt,
-                    },
-                ],
-                temperature: 0.7,
-            }),
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            console.warn(
-                `Groq API error: ${error?.error?.message || response.statusText}`,
-            );
-            return null;
-        }
-
-        const data = await response.json();
-        return data?.choices?.[0]?.message?.content || null;
-    } catch (err) {
-        console.warn("Groq API call failed:", err);
-        return null;
-    }
-};
-
+// Helper functions
 const toSentence = (value, fallback = "") =>
     value && value.trim().length ? value.trim() : fallback;
 
@@ -174,29 +134,8 @@ export const generateNotice = async (formData, assets = {}) => {
     } = formData;
     const { headerLogoUrl, footerLogoUrl } = assets;
 
-    const prompt = `
-Generate a formal notice for AIML Club event announcement in plain text format.
-
-Event Details:
-- Event Title: ${toSentence(eventName, "Upcoming Event")}
-- Date: ${formatDate(eventDate)}
-- Time: ${toSentence(eventStartTime, "Add start")} - ${toSentence(eventEndTime, "Add end")}
-- Duration: ${toSentence(eventDuration, "Add duration")}
-- Venue: ${toSentence(eventVenue, "Add venue")}
-- Agenda: ${toSentence(eventFlow, "Add agenda")}
-
-Create a professional notice with:
-1. Clear title: "NOTICE: ${toSentence(eventName, "Event")}"
-2. Introduction to all members
-3. Detailed event information (date, time, venue, duration)
-4. What to expect / Agenda details
-5. Call to action for attendance
-6. Contact information for queries
-
-Write in formal, professional tone.
-`;
-
-    const aiContent = await callGemini(prompt);
+    // Call backend API to generate notice content
+    const aiContent = await generateTextBackend("notice", formData);
 
     const content =
         aiContent ||
@@ -254,27 +193,8 @@ export const generateReport = async (formData, assets = {}) => {
     } = formData;
     const { headerLogoUrl, footerLogoUrl } = assets;
 
-    const prompt = `
-Generate a professional event report for AIML Club in plain text format (no markdown).
-
-Event Details:
-- Event Name: ${toSentence(eventName, "Add event name")}
-- Date: ${formatDate(eventDate)}
-- Time: ${toSentence(eventStartTime, "Add start")} - ${toSentence(eventEndTime, "Add end")}
-- Venue: ${toSentence(formData.eventVenue, "Add venue")}
-- Duration: ${toSentence(eventDuration, "Add duration")}
-- Agenda/Flow: ${toSentence(eventFlow, "Add agenda")}
-
-Create a structured report with these sections:
-1. Executive Summary: Brief overview of the event and its significance
-2. Agenda Highlights: Key points and activities covered
-3. Key Outcomes: Learning objectives achieved and participant feedback
-4. Next Steps: Follow-up actions and improvements
-
-Write in formal, professional tone suitable for AIML Club documentation.
-`;
-
-    const aiContent = await callGemini(prompt);
+    // Call backend API to generate report content
+    const aiContent = await generateTextBackend("report", formData);
 
     const content =
         aiContent ||
@@ -338,32 +258,13 @@ export const generateInstagramContent = async (formData) => {
         eventFlow,
     } = formData;
 
+    // Call backend API to generate Instagram content
+    const aiContent = await generateTextBackend("instagram", formData);
+
     const timeStr =
         eventStartTime && eventEndTime
             ? `${eventStartTime} - ${eventEndTime}`
             : eventStartTime || "Time TBA";
-
-    const prompt = `
-Generate an engaging Instagram pre-event announcement post for AIML Club. Keep it under 200 words.
-
-Event Details:
-- Event: ${toSentence(eventName, "AIML Club Event")}
-- Date: ${eventDate || "Date soon"}
-- Time: ${timeStr}
-- Venue: ${toSentence(eventVenue, "Venue TBA")}
-- What's happening: ${toSentence(eventFlow, "Add agenda")}
-
-Create a catchy, Instagram-friendly post with:
-1. Hook/Attention-grabber
-2. Key details (date, time, venue)
-3. What attendees will learn/experience
-4. Call to action (save date, bring friends, RSVP mention)
-5. 2-3 relevant hashtags
-
-Use emojis naturally to make it visually appealing and engaging for social media.
-`;
-
-    const aiContent = await callGemini(prompt);
 
     return (
         aiContent ||
@@ -385,27 +286,8 @@ export const generateLinkedInContent = async (formData) => {
     const { eventName, eventDate, eventStartTime, eventEndTime, eventFlow } =
         formData;
 
-    const prompt = `
-Generate a professional LinkedIn event announcement post for AIML Club. Keep it under 250 words.
-
-Event Details:
-- Event: ${toSentence(eventName, "an AIML Club session")}
-- Date: ${formatDate(eventDate)}
-- Time: ${toSentence(eventStartTime, "Add start")} - ${toSentence(eventEndTime, "Add end")}
-- What to expect: ${toSentence(eventFlow, "Add agenda")}
-
-Create a professional LinkedIn post with:
-1. Strong opening about professional/skill development value
-2. Event details (date, time)
-3. Key learning areas and outcomes
-4. Who should attend (target audience)
-5. Call to action (register, learn more)
-6. 3-4 relevant professional hashtags (#AIML, #Learning, #Community, etc.)
-
-Keep a professional, inspiring tone suitable for career development audience.
-`;
-
-    const aiContent = await callGemini(prompt);
+    // Call backend API to generate LinkedIn content
+    const aiContent = await generateTextBackend("linkedin", formData);
 
     return (
         aiContent ||
@@ -522,7 +404,8 @@ Do NOT:
 - Add filler text
 `;
 
-    const aiContent = await callGemini(prompt);
+    // Call backend API to generate WhatsApp invite content with detailed specifications
+    const aiContent = await generateTextBackend("whatsapp invite", formData);
 
     return (
         aiContent ||
@@ -545,24 +428,8 @@ Reply with ✋ to confirm your attendance. Bring a friend! 👋
 export const generateWhatsAppPostEvent = async (formData) => {
     const { eventName, eventFlow } = formData;
 
-    const prompt = `
-Generate a friendly WhatsApp thank-you/recap message for AIML Club post-event. Keep it under 100 words.
-
-Event Details:
-- Event: ${toSentence(eventName, "AIML Club Session")}
-- Highlights: ${toSentence(eventFlow, "Add highlights")}
-
-Create a warm, celebratory WhatsApp message with:
-1. Gratitude and celebration tone
-2. Event highlights recap
-3. Appreciation for attendees
-4. Teaser for next event
-5. Keep everyone engaged
-
-Use celebratory emojis and friendly tone. Should feel like a group appreciation message.
-`;
-
-    const aiContent = await callGemini(prompt);
+    // Call backend API to generate WhatsApp post-event content
+    const aiContent = await generateTextBackend("whatsapp post event", formData);
 
     return (
         aiContent ||
@@ -582,26 +449,8 @@ Thanks for being part of the AIML Club community! ❤️`
 export const generateInstagramPostEvent = async (formData) => {
     const { eventName, eventDate, eventFlow } = formData;
 
-    const prompt = `
-Generate an Instagram post-event recap/celebration post for AIML Club. Keep it under 180 words.
-
-Event Details:
-- Event: ${toSentence(eventName, "AIML Club Event")}
-- Date: ${eventDate || "the recent event"}
-- Highlights: ${toSentence(eventFlow, "Add highlights")}
-
-Create a celebratory, engaging post with:
-1. Excitement/gratitude hook
-2. Event recap and key highlights
-3. Participant impact/outcomes
-4. Thank you to attendees
-5. Teaser for next event
-6. 2-3 relevant hashtags
-
-Use celebratory emojis and energy to keep the community engaged.
-`;
-
-    const aiContent = await callGemini(prompt);
+    // Call backend API to generate Instagram post-event content
+    const aiContent = await generateTextBackend("instagram post event", formData);
 
     return (
         aiContent ||
