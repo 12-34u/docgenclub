@@ -1,0 +1,64 @@
+{
+  "version": "1.0.0",
+  "releaseDate": "2026-03-07",
+  "codename": "Genesis",
+  "description": "Initial production release with Gemini AI integration",
+  "features": [
+    "Google Gemini 1.5-Pro integration",
+    "7 document types (Notice, Report, Instagram, LinkedIn, WhatsApp)",
+    "Improved AI prompts for better content quality",
+    "Enhanced WhatsApp invite with detailed formatting",
+    "Environment-based configuration",
+    "Production-ready deployment setup",
+    "Comprehensive documentation"
+  ],
+  "changes": {
+    "added": [
+      "Gemini API integration replacing GROQ",
+      "Backend API for all content generation",
+      "Environment variable configuration",
+      "Deployment guides and documentation",
+      "Health check endpoint",
+      "Speaker/mentor support in all formats"
+    ],
+    "improved": [
+      "All AI prompts for better output quality",
+      "Error handling and fallbacks",
+      "Document structure and formatting",
+      "Development and deployment workflow"
+    ],
+    "removed": [
+      "GROQ API dependency",
+      "Hardcoded API keys",
+      "Frontend direct API calls"
+    ]
+  },
+  "tech": {
+    "frontend": {
+      "framework": "React 19",
+      "buildTool": "Vite 7",
+      "state": "Zustand 5",
+      "docGen": "docx 9.5"
+    },
+    "backend": {
+      "framework": "FastAPI",
+      "ai": "Google Gemini 1.5-Pro",
+      "runtime": "Python 3.9+"
+    }
+  },
+  "deployment": {
+    "frontend": "Vercel",
+    "backend": "Railway / Render / Cloud Run",
+    "database": "None (stateless)"
+  },
+  "nextVersion": {
+    "planned": "1.1.0",
+    "features": [
+      "User authentication",
+      "Document history",
+      "Template customization",
+      "Batch generation",
+      "Analytics dashboard"
+    ]
+  }
+}

@@ -1,9 +1,18 @@
+import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from generator import generate_content, supported_doc_types
+from dotenv import load_dotenv
 
-app = FastAPI(title="DocGen Backend", version="1.0.0")
+# Load environment variables
+load_dotenv()
+
+app = FastAPI(
+    title="DocGen Backend API", 
+    version="1.0.0",
+    description="AI-powered document generation API for AIML Club using Google Gemini"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,5 +44,8 @@ async def generate(body: GenerateRequest):
 
 if __name__ == "__main__":
     import uvicorn
-
-    uvicorn.run("main:app", host="0.0.0.0", port=3001, reload=False)
+    
+    port = int(os.environ.get("PORT", 3001))
+    host = os.environ.get("HOST", "0.0.0.0")
+    
+    uvicorn.run("main:app", host=host, port=port, reload=False)
