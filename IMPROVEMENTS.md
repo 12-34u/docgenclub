@@ -7,7 +7,7 @@ Your document generator has been significantly improved and is now ready for v1 
 
 ### 1. ✅ Gemini API Integration
 - **Replaced** GROQ API with Google Gemini 1.5-Pro
-- **Configured** your API key: `AIzaSyDb6HEljnx0X9Xxlz1lvJMphIKAnjM3fWo`
+- **Configured** API key loading from backend environment variables
 - **Upgraded** from gemini-1.5-flash to gemini-1.5-pro for better quality
 - **Added** proper error handling and fallbacks
 
@@ -82,7 +82,7 @@ Created proper configuration files:
 
 **Backend** (`server/.env`):
 ```env
-GEMINI_API_KEY=AIzaSyDb6HEljnx0X9Xxlz1lvJMphIKAnjM3fWo
+GEMINI_API_KEY=your_gemini_api_key_here
 PORT=3001
 HOST=0.0.0.0
 ```
