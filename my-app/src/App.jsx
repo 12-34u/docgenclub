@@ -53,6 +53,7 @@ function calculateDuration(startTime, endTime) {
 function App() {
     const [showForm, setShowForm] = useState(false);
     const [generatedContent, setGeneratedContent] = useState(null);
+    const [isGenerating, setIsGenerating] = useState(false);
 
     // Zustand persisted store
     const { formData, setFormData, resetFormData } = useFormStore();
@@ -112,6 +113,8 @@ function App() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (isGenerating) return;
+
         const { docType, eventName } = formData;
         const enrichedData = {
             ...formData,
@@ -122,6 +125,7 @@ function App() {
         };
 
         try {
+            setIsGenerating(true);
             if (docType === "Notice") {
                 const doc = await generateNotice(enrichedData, logoAssets);
                 await downloadWord(doc, `${eventName || "Event"}_Notice.docx`);
@@ -149,6 +153,8 @@ function App() {
                 type: "error",
                 message: `Error generating content: ${error.message}`,
             });
+        } finally {
+            setIsGenerating(false);
         }
     };
 
@@ -450,12 +456,27 @@ function App() {
                                 </label>
 
                                 <div className="form-actions">
-                                    <button type="submit" className="btn solid">
-                                        Generate document
+                                    <button
+                                        type="submit"
+                                        className={`btn solid ${isGenerating ? "loading" : ""}`}
+                                        disabled={isGenerating}
+                                    >
+                                        {isGenerating ? (
+                                            <>
+                                                <span
+                                                    className="spinner"
+                                                    aria-hidden="true"
+                                                />
+                                                <span>Generating document...</span>
+                                            </>
+                                        ) : (
+                                            "Generate document"
+                                        )}
                                     </button>
                                     <button
                                         type="button"
                                         className="btn ghost"
+                                        disabled={isGenerating}
                                         onClick={() =>
                                             window.scrollTo({ top: 0, behavior: "smooth" })
                                         }
@@ -463,6 +484,12 @@ function App() {
                                         Back to top
                                     </button>
                                 </div>
+
+                                {isGenerating && (
+                                    <p className="loading-hint" role="status" aria-live="polite">
+                                        Working on your document. This can take a few seconds.
+                                    </p>
+                                )}
                             </form>
                         )}
                     </section>
