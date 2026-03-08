@@ -1,4 +1,7 @@
 import os
+import json
+import hashlib
+from collections import OrderedDict
 from datetime import datetime
 from typing import Dict
 import google.generativeai as genai
@@ -7,6 +10,44 @@ import google.generativeai as genai
 api_key = os.environ.get("GEMINI_API_KEY")
 if api_key:
     genai.configure(api_key=api_key)
+
+MODEL_NAME = "gemini-2.5-flash"
+GENERATION_CONFIG = {
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "max_output_tokens": 2048,
+}
+
+# Reuse model client across requests to reduce per-request setup overhead.
+model = genai.GenerativeModel(MODEL_NAME) if api_key else None
+
+# Small in-memory cache for repeated prompts from same form inputs.
+CACHE_MAX_ITEMS = 100
+response_cache = OrderedDict()
+
+
+def _make_cache_key(doc_type: str, form: Dict) -> str:
+    payload = json.dumps(
+        {"docType": doc_type, "formData": form or {}},
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _cache_get(key: str):
+    value = response_cache.get(key)
+    if value is not None:
+        response_cache.move_to_end(key)
+    return value
+
+
+def _cache_set(key: str, value: str) -> None:
+    response_cache[key] = value
+    response_cache.move_to_end(key)
+    while len(response_cache) > CACHE_MAX_ITEMS:
+        response_cache.popitem(last=False)
 
 
 def _to_sentence(value: str, fallback: str = "") -> str:
@@ -39,16 +80,7 @@ def _call_gemini(prompt: str) -> str:
         )
 
     try:
-        # Use gemini-2.5-flash - latest stable flash model
-        model = genai.GenerativeModel("gemini-2.5-flash")
-        response = model.generate_content(
-            prompt,
-            generation_config={
-                "temperature": 0.7,
-                "top_p": 0.95,
-                "max_output_tokens": 2048,
-            }
-        )
+        response = model.generate_content(prompt, generation_config=GENERATION_CONFIG)
         return response.text.strip()
     except Exception as e:
         print(f"Gemini API error: {e}")
@@ -529,4 +561,16 @@ def generate_content(doc_type: str, form: Dict) -> str:
     key = doc_type.lower()
     if key not in generators:
         raise ValueError(f"Unsupported docType: {doc_type}")
-    return generators[key](form or {})
+
+    normalized_form = form or {}
+    cache_key = _make_cache_key(key, normalized_form)
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+
+    content = generators[key](normalized_form)
+    if not content.startswith("[Error generating content:") and not content.startswith(
+        "[Configuration error:"
+    ):
+        _cache_set(cache_key, content)
+    return content

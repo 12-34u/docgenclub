@@ -10,6 +10,9 @@ import {
 } from "docx";
 import { generateTextBackend } from "./backendClient";
 
+// Cache image fetches so repeated generations do not re-download the same assets.
+const imageBufferCache = new Map();
+
 // Helper functions
 const toSentence = (value, fallback = "") =>
     value && value.trim().length ? value.trim() : fallback;
@@ -62,54 +65,62 @@ const dataUrlToBuffer = (dataUrl) => {
 
 const fetchImageBuffer = async (urlOrData) => {
     if (!urlOrData) return null;
-    // Support data URLs directly to avoid fetch/CORS issues
-    if (urlOrData.startsWith("data:")) {
-        return dataUrlToBuffer(urlOrData);
-    }
-    try {
-        const res = await fetch(urlOrData, { mode: "cors" });
-        if (!res.ok) return null;
-        return await res.arrayBuffer();
-    } catch (err) {
-        console.warn("Image fetch failed", err);
-        return null;
-    }
+
+    const cached = imageBufferCache.get(urlOrData);
+    if (cached) return cached;
+
+    const fetchPromise = (async () => {
+        // Support data URLs directly to avoid fetch/CORS issues
+        if (urlOrData.startsWith("data:")) {
+            return dataUrlToBuffer(urlOrData);
+        }
+        try {
+            const res = await fetch(urlOrData, { mode: "cors" });
+            if (!res.ok) return null;
+            return await res.arrayBuffer();
+        } catch (err) {
+            console.warn("Image fetch failed", err);
+            return null;
+        }
+    })();
+
+    imageBufferCache.set(urlOrData, fetchPromise);
+    return fetchPromise;
 };
 
 const buildHeaderFooter = async ({ headerUrl, footerUrl }) => {
     const headerChildren = [];
     const footerChildren = [];
 
-    if (headerUrl) {
-        const buf = await fetchImageBuffer(headerUrl);
-        if (buf) {
-            headerChildren.push(
-                new Paragraph({
-                    children: [
-                        new ImageRun({
-                            data: buf,
-                            transformation: { width: 600, height: 120 },
-                        }),
-                    ],
-                }),
-            );
-        }
+    const [headerBuf, footerBuf] = await Promise.all([
+        headerUrl ? fetchImageBuffer(headerUrl) : Promise.resolve(null),
+        footerUrl ? fetchImageBuffer(footerUrl) : Promise.resolve(null),
+    ]);
+
+    if (headerBuf) {
+        headerChildren.push(
+            new Paragraph({
+                children: [
+                    new ImageRun({
+                        data: headerBuf,
+                        transformation: { width: 600, height: 120 },
+                    }),
+                ],
+            }),
+        );
     }
 
-    if (footerUrl) {
-        const buf = await fetchImageBuffer(footerUrl);
-        if (buf) {
-            footerChildren.push(
-                new Paragraph({
-                    children: [
-                        new ImageRun({
-                            data: buf,
-                            transformation: { width: 320, height: 60 },
-                        }),
-                    ],
-                }),
-            );
-        }
+    if (footerBuf) {
+        footerChildren.push(
+            new Paragraph({
+                children: [
+                    new ImageRun({
+                        data: footerBuf,
+                        transformation: { width: 320, height: 60 },
+                    }),
+                ],
+            }),
+        );
     }
 
     return {
@@ -134,8 +145,13 @@ export const generateNotice = async (formData, assets = {}) => {
     } = formData;
     const { headerLogoUrl, footerLogoUrl } = assets;
 
-    // Call backend API to generate notice content
-    const aiContent = await generateTextBackend("notice", formData);
+    const [aiContent, hf] = await Promise.all([
+        generateTextBackend("notice", formData),
+        buildHeaderFooter({
+            headerUrl: headerLogoUrl,
+            footerUrl: footerLogoUrl,
+        }),
+    ]);
 
     const content =
         aiContent ||
@@ -166,11 +182,6 @@ AIML CLUB`;
             }),
     );
 
-    const hf = await buildHeaderFooter({
-        headerUrl: headerLogoUrl,
-        footerUrl: footerLogoUrl,
-    });
-
     return new Document({
         sections: [
             {
@@ -193,8 +204,13 @@ export const generateReport = async (formData, assets = {}) => {
     } = formData;
     const { headerLogoUrl, footerLogoUrl } = assets;
 
-    // Call backend API to generate report content
-    const aiContent = await generateTextBackend("report", formData);
+    const [aiContent, hf] = await Promise.all([
+        generateTextBackend("report", formData),
+        buildHeaderFooter({
+            headerUrl: headerLogoUrl,
+            footerUrl: footerLogoUrl,
+        }),
+    ]);
 
     const content =
         aiContent ||
@@ -231,11 +247,6 @@ Prepared by the AIML Club.`;
                 spacing: { after: 120 },
             }),
     );
-
-    const hf = await buildHeaderFooter({
-        headerUrl: headerLogoUrl,
-        footerUrl: footerLogoUrl,
-    });
 
     return new Document({
         sections: [
